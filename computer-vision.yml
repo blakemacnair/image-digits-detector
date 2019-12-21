@@ -12,6 +12,7 @@ dependencies:
   - scikit-image
   - scikit-learn
   - skorch
+  - tqdm
   - torchvision
   - pip:
       - kornia
