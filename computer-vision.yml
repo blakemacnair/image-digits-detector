@@ -1,0 +1,17 @@
+name: computer-vision
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.7
+  - jupyter
+  - matplotlib
+  - numpy
+  - pandas
+  - pytorch
+  - scikit-image
+  - scikit-learn
+  - skorch
+  - torchvision
+  - pip:
+      - kornia
