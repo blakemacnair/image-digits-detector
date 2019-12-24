@@ -1,22 +1,64 @@
 import numpy as np
 import h5py
 import pandas
+from functools import reduce
+from urllib.request import urlretrieve
 from tqdm import tqdm
+import tarfile
 
-if __name__ == '__main__':
-    filename = './data/train/digitStruct.mat'
-    with h5py.File(filename, 'r') as h:
+
+# TAR files and dataset information from http://ufldl.stanford.edu/housenumbers/
+
+class TqdmUpTo(tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+    def update_to(self, b=1, bsize=1, tsize=None):
+        """
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)  # will also set self.n = b * bsize
+
+
+def download_tar(url, local_dir_path, local_file_name=None):
+    local_file_name = local_file_name or url.split('/')[-1]
+    local_file_path = '/'.join([local_dir_path, local_file_name])
+
+    with TqdmUpTo(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
+        path, message = urlretrieve(url, local_file_path, reporthook=t.update_to)
+
+    return local_file_name, path, message
+
+
+def extract_tar(file_path):
+    f = tarfile.open(file_path)
+    dir_comps = file_path.split('/')
+    dir_path = '/'.join(dir_comps[:-1])
+    f.extractall(path=dir_path)
+
+
+def download_and_extract_tar(url, local_dir_path, local_file_name=None):
+    name, path, _ = download_tar(url, local_dir_path, local_file_name)
+    extract_tar(path)
+
+
+def read_matlab_digit_struct(file_path, target_csv_path):
+    rows = []
+
+    with h5py.File(file_path, 'r') as h:
         d = h['digitStruct']
-        mtype = d.attrs['MATLAB_class'].decode()  # Is 'struct' type
 
         boxes = d['bbox']
         names = d['name']
 
         assert len(boxes) == len(names)
 
-        rows = []
-
-        for i in tqdm(range(len(boxes))):
+        for i in tqdm(range(100)):
             name_ref = names[i][0]
             box_ref = boxes[i][0]
 
@@ -26,8 +68,6 @@ if __name__ == '__main__':
             name = ''.join([chr(x) for x in name_raw])
 
             row = {'name': name}
-
-            box_vals = {}
 
             for key in box_raw:
                 key_raw = box_raw[key]
@@ -47,10 +87,48 @@ if __name__ == '__main__':
 
                 np_values = np.array(np_values).flatten()
 
-                box_vals[key] = np_values
+                row[key] = np_values
 
-            box_dataframe = pandas.DataFrame(box_vals)
-            row['boxes'] = box_dataframe
-            rows.append(row)
+            rows.append(pandas.DataFrame(row))
 
-        print('no')
+    # After reading file, flatten data frames into one
+    def combine_rows(df1, df2): return df1.append(df2)
+
+    df = reduce(combine_rows, rows)
+
+    # Reset the index to make indexes actually unique again
+    df = df.reset_index()
+    df = df.drop('index', 1)
+
+    # Save data frame to file so we don't have to run this every time
+    # with open(csv_file_path, 'w') as csv_file:
+    df.to_csv(target_csv_path)
+
+
+if __name__ == '__main__':
+    # 1. Full Numbers
+    train = "http://ufldl.stanford.edu/housenumbers/train.tar.gz"
+    test = "http://ufldl.stanford.edu/housenumbers/test.tar.gz"
+    extra = "http://ufldl.stanford.edu/housenumbers/extra.tar.gz"
+
+    number_urls = [train, test]
+
+    # 2. Cropped 32x32 numbers
+    train_32 = "http://ufldl.stanford.edu/housenumbers/train_32x32.mat"
+    test_32 = "http://ufldl.stanford.edu/housenumbers/test_32x32.mat"
+    extra_32 = "http://ufldl.stanford.edu/housenumbers/extra_32x32.mat"
+
+    cropped_urls = [train_32, test_32]
+
+    for url in number_urls:
+        download_and_extract_tar(url, './data')
+
+    # Local file paths for restructuring the matlab bounding box files to csv files
+    train_file_path = './data/train/digitStruct.mat'
+    train_csv_file_path = './data/train/digitStruct.csv'
+
+    test_file_path = './data/train/digitStruct.mat'
+    test_csv_file_path = './data/train/digitStruct.csv'
+
+    read_matlab_digit_struct(train_file_path, train_csv_file_path)
+    read_matlab_digit_struct(test_file_path, test_csv_file_path)
