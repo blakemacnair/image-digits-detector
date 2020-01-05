@@ -7,6 +7,13 @@ from tqdm import tqdm
 import tarfile
 
 
+SVHN_TRAIN_DIR = './data/train/'
+SVHN_TEST_DIR = './data/train/'
+
+SVHN_TRAIN_CSV = './data/train/digitStruct.csv'
+SVHN_TEST_CSV = './data/train/digitStruct.csv'
+
+
 # TAR files and dataset information from http://ufldl.stanford.edu/housenumbers/
 
 class TqdmUpTo(tqdm):
@@ -58,6 +65,7 @@ def read_matlab_digit_struct(file_path, target_csv_path):
 
         assert len(boxes) == len(names)
 
+        # TODO: Remove hard limit
         for i in tqdm(range(100)):
             name_ref = names[i][0]
             box_ref = boxes[i][0]
@@ -125,10 +133,8 @@ if __name__ == '__main__':
 
     # Local file paths for restructuring the matlab bounding box files to csv files
     train_file_path = './data/train/digitStruct.mat'
-    train_csv_file_path = './data/train/digitStruct.csv'
 
     test_file_path = './data/train/digitStruct.mat'
-    test_csv_file_path = './data/train/digitStruct.csv'
 
-    read_matlab_digit_struct(train_file_path, train_csv_file_path)
-    read_matlab_digit_struct(test_file_path, test_csv_file_path)
+    read_matlab_digit_struct(train_file_path, CSV_SVHN_TRAIN)
+    read_matlab_digit_struct(test_file_path, CSV_SVHN_TEST)
