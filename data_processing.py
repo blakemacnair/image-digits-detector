@@ -54,7 +54,7 @@ def download_and_extract_tar(url, local_dir_path, local_file_name=None):
     extract_tar(path)
 
 
-def read_matlab_digit_struct(file_path, target_csv_path):
+def read_matlab_digit_struct(file_path, target_csv_path, max_n=None):
     rows = []
 
     with h5py.File(file_path, 'r') as h:
@@ -63,10 +63,12 @@ def read_matlab_digit_struct(file_path, target_csv_path):
         boxes = d['bbox']
         names = d['name']
 
+        max_n = max_n or len(boxes)
+        max_n = min(max_n, len(boxes))
+
         assert len(boxes) == len(names)
 
-        # TODO: Remove hard limit
-        for i in tqdm(range(100)):
+        for i in tqdm(range(max_n)):
             name_ref = names[i][0]
             box_ref = boxes[i][0]
 
@@ -108,6 +110,9 @@ def read_matlab_digit_struct(file_path, target_csv_path):
     df = df.reset_index()
     df = df.drop('index', 1)
 
+    # Convert labels of 10 to 0, since they actually represent the digit 0
+    df['label'][df['label'] == 10] = 0
+
     # Save data frame to file so we don't have to run this every time
     # with open(csv_file_path, 'w') as csv_file:
     df.to_csv(target_csv_path)
@@ -128,13 +133,13 @@ if __name__ == '__main__':
 
     cropped_urls = [train_32, test_32]
 
-    for url in number_urls:
-        download_and_extract_tar(url, './data')
+    # for url in number_urls:
+    #     download_and_extract_tar(url, './data')
 
     # Local file paths for restructuring the matlab bounding box files to csv files
     train_file_path = './data/train/digitStruct.mat'
 
     test_file_path = './data/train/digitStruct.mat'
 
-    read_matlab_digit_struct(train_file_path, CSV_SVHN_TRAIN)
-    read_matlab_digit_struct(test_file_path, CSV_SVHN_TEST)
+    read_matlab_digit_struct(train_file_path, SVHN_TRAIN_CSV, max_n=50)
+    read_matlab_digit_struct(test_file_path, SVHN_TEST_CSV, max_n=50)

@@ -3,16 +3,14 @@ from typing import List, Dict
 from torchvision.models.detection import faster_rcnn
 import torchvision.transforms as transforms
 import torch
-import numpy as np
 import pandas as pd
 from PIL import Image
-import glob
 
 from data_processing import SVHN_TEST_CSV, SVHN_TRAIN_CSV, SVHN_TEST_DIR, SVHN_TRAIN_DIR
 # TODO: Try torch.utils.data.DataLoader
 
 
-def construct_images_training_dict(file_path: str):
+def construct_images_training_dict(file_path: str, root_dir_path: str):
     """
     For TorchVision's [Faster R-CNN object detection model]
     (https://pytorch.org/docs/stable/torchvision/models.html#faster-r-cnn),
@@ -35,7 +33,7 @@ def construct_images_training_dict(file_path: str):
     image_dicts: List[Dict[str, torch.Tensor]] = []
 
     for file_name in file_names:
-        image_path = SVHN_TRAIN_DIR + "/" + file_name
+        image_path = root_dir_path + "/" + file_name
         image = Image.open(image_path)
         image_tensor = to_tensor.__call__(image)
         image.close()
@@ -66,5 +64,4 @@ def construct_images_training_dict(file_path: str):
 
 
 if __name__ == "__main__":
-    images, image_boxes = construct_images_training_dict(SVHN_TRAIN_CSV)
-    print("Hello world!")
+    images, image_boxes = construct_images_training_dict(SVHN_TRAIN_CSV, SVHN_TRAIN_DIR)
